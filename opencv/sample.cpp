@@ -9,6 +9,7 @@
 #include <filesystem>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "testing.h"
 
 namespace fs = std::filesystem;
 using namespace cv;
@@ -64,6 +65,7 @@ int reading_image(String path) {
 	waitKey(100);
 	imshow(windowName, imgThresholded);
 	//Calculate the moments of the thresholded image
+
 	Moments oMoments = moments(imgThresholded);
 
 	double dM01 = oMoments.m01;
@@ -76,7 +78,7 @@ int reading_image(String path) {
 		cout << "ball" << endl;
 		waitKey(0); // Wait for any keystroke in the window
 		imshow(windowName, imgOriginal); //show the thresholded image
-
+		return boxes(path);
 	}
 	else {
 		cout << "no ball in image" << endl;
@@ -86,7 +88,7 @@ int reading_image(String path) {
 
 }
 
-int main(int argc, char** argv)
+int ball()
 {
 	// Read the image file
 	String windowName = "ball rolling"; //Name of the window
@@ -102,17 +104,24 @@ int main(int argc, char** argv)
 	//flag = reading_image(path_root + "01-16-2024_14-03-19.541_19.png");
 	cout << "next iter" << endl;
 	//path = path_root + "01-16-2024_14-03-19.541_19.png";
-
+	vector<float>areas(100);
 	for (const auto& entry : fs::directory_iterator(path_root)) {
 		cout << entry.path() << endl;
 		flag = reading_image(entry.path().string());
+		areas[i] = 3.14 * flag * flag;
 		if (flag == -1) {
 			cout << "Image find failed." << endl;
 		}
 		i = i + 1;
 	}
+	sort(areas.begin(), areas.end());
+	cout << "areas:" << areas[areas.size() / 2] << endl;
 
 	destroyWindow(windowName); //destroy the created window
 
 	return 0;
+}
+
+int main(int argc, char** argv) {
+	return ball();
 }
