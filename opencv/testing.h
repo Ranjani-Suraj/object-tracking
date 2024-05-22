@@ -6,6 +6,6 @@
 #include <iostream>
 
 
-float thresh_callback(int, int);
+float thresh_callback(int, int, cv::Mat);
 
-int boxes(std::string);
+int boxes(cv::Mat, cv::Mat);

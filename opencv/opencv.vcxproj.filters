@@ -21,5 +21,13 @@
     <ClCompile Include="testing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="analysis.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="analysis.h">
+      <Filter>Resource Files\Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
