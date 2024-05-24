@@ -136,6 +136,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="analysis.cpp" />
+    <ClCompile Include="rotation_test.cpp" />
     <ClCompile Include="sample.cpp" />
     <ClCompile Include="testing.cpp" />
   </ItemGroup>

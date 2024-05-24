@@ -24,6 +24,9 @@
     <ClCompile Include="analysis.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rotation_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="analysis.h">

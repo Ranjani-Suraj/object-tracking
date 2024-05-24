@@ -59,19 +59,19 @@ float thresh_callback(int, int, Mat imgOriginal)
 	try
 	{
 		//edge detection on thres
-		cout << "edge detect" << endl;
+		std::cout << "edge detect" << endl;
 		dilate(src_gray, src_gray, getStructuringElement(MORPH_ELLIPSE, Size(1, 1)));
 
 		Canny(src_gray, canny_output, 60, 255);
 	}
 	catch (Exception& e)
 	{
-		cout << "canny didnt work line 76" << endl; // output exception message
+		std::cout << "canny didnt work line 76" << endl; // output exception message
 	}
 	//based on edges, draw contours and store as vector 
 	vector<vector<Point> > contours;
 	namedWindow("canny");
-	imshow("canny", canny_output);
+	cv::imshow("canny", canny_output);
 	findContours(canny_output, contours, RETR_LIST, CHAIN_APPROX_NONE); 
 	
 	vector<vector<Point>> contours_poly(contours.size());
@@ -87,8 +87,8 @@ float thresh_callback(int, int, Mat imgOriginal)
 		try
 		{
 			//approximates a bounding polynomial based on contours
-			if (contourArea(contours[i]) < 100 || contourArea(contours[i]) > 50000) {
-				cout << "small/big" << contours.size() << i << endl;
+			if (contourArea(contours[i]) < 500 || contourArea(contours[i]) > 50000) {
+				std::cout << "small/big" << contours.size() << i << endl;
 				//continue;
 			}
 			approxPolyDP(contours[i], contours_poly[i], 1, true);
@@ -96,13 +96,13 @@ float thresh_callback(int, int, Mat imgOriginal)
 			boundRect[i] = boundingRect(contours_poly[i]);
 			oMoments = moments(contours[i]);
 			dArea = oMoments.m00;
-			cout << "rect size" << boundRect[i].size() << endl;
-			cout << contourArea(contours[i]) << " " << dArea << endl;
-			minEnclosingCircle(contours_poly[i], centers[i], radius[i]);
+			std::cout << "rect size" << boundRect[i].size() << endl;
+			std::cout << contourArea(contours[i]) << " " << dArea << endl;
+			//minEnclosingCircle(contours_poly[i], centers[i], radius[i]);
 		}
 		catch (Exception& e)
 		{
-			cout << "either approxpoly, contour area, or min circle, have failed" << endl; // output exception message
+			std::cout << "either approxpoly, contour area, or min circle, have failed" << endl; // output exception message
 		}
 
 	}
@@ -117,26 +117,36 @@ float thresh_callback(int, int, Mat imgOriginal)
 		//randomly chooses a colour for the drawn contours
 		Scalar colour = Scalar(255, 0, 255);
 		//draws the contours, bounding rectangle, and minimum enclosing circle onto the image
-		if (boundRect[i].height < 80 || boundRect[i].width < 30 || boundRect[i].height > 300 || boundRect[i].width > 200) {
-			cout << "no. contours " << contours.size() << " " << contourArea(contours[i]) << endl;
+		//if (boundRect[i].height < 100 || boundRect[i].width < 50 || boundRect[i].height > 300 || boundRect[i].width > 200) {
+		if(contourArea(contours[i]) < 600 || contourArea(contours[i]) > 50000){
+			std::cout << "no. contours " << contours.size() << " " << contourArea(contours[i]) << endl;
 			continue;
 		}
-		drawContours(drawing, contours_poly, (int)i, colour, 1);
+		cv::drawContours(drawing, contours_poly, (int)i, colour, 1);
 		rectangle(drawing, boundRect[i].tl(), boundRect[i].br(), colour, 1);
 		num_particles++;
 		rect = minAreaRect(contours_poly[i]);
-		cout << "rotated rect sizes" << rect.size << endl;
+		std::cout << "rotated rect sizes" << rect.size << endl;
+		Point2f vertices[4];
+		rect.points(vertices);
+
+
+		//for (int k = 0; k < 4; k++) {
+		//	line(drawing, vertices[k], vertices[(k + 1) % 4], Scalar(0, 200, 120));
+		//}
+		// 
+		// 
 		//ellipse(drawing, rect, Scalar(255, 100, 0), 1);
 		//circle(drawing, centers[i], (int)radius[i], Scalar(0, 255, 0), 1);
 		if (contourArea(contours[i]) > max_area) {
 			max_area = contourArea(contours[i]);
 		}
-		
 	}
-	imshow("Contours", drawing);
-	drawContours(drawing, contours_poly, -1, Scalar(120,100,120), 1);
+
+	cv::imshow("Contours", drawing);
+	cv::drawContours(drawing, contours_poly, -1, Scalar(120,100,120), 1);
 	num_particles = (num_particles+1)/2;
-	cout << num_particles << "PARTICLES -----------------------------------------" << endl;
+	std::cout << num_particles << "PARTICLES -----------------------------------------" << endl;
 	
 	
 	return max_area;

@@ -41,16 +41,9 @@ int reading_image(String path) {
 
 	threshold(imgHSV, imgThresholded, 60, 255, THRESH_BINARY);
 	
-	erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)), Point(-1, -1));
-	dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)), Point(-1, -1));
-	/*
-	//morphological closing (removes small holes from the foreground)
-	dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-	erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-	*/
-	//inRange(imgThresholded, Scalar(0, 0, 60), Scalar(100, 255, 255), imgThresholded); //Threshold the image based on the given ranges
-
-	//Calculate the moments of the thresholded image
+	erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)), Point(-1, -1), 2);
+	dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)), Point(-1, -1), 2);
+	 
 	//Moments oMoments = moments(imgThresholded);
 	//double dArea = oMoments.m00;
 
@@ -120,7 +113,24 @@ int ball()
 }
 
 int main(int argc, char** argv) {
-	analyses img_details = particle_analysis("E:\\ImageSave With Apple Diff. Size\\IRLight\\TopUMCam1\\Lane1\\05-09-2024_09-51-47.920_65.png");
-	//return 0;
-	return ball();
+	//return ball();
+	
+	analyses img_details = particle_analysis("E:\\ImageSave With Apple Diff. Size\\IRLight\\TopUMCam1\\Lane1\\05-09-2024_09-51-46.935_56.png");
+	
+	cout << "hi" << endl;
+	vector<float> angle = img_details.angles;
+	vector<float> areas = img_details.area;
+	for (int i = 0; i < angle.size(); i++) {
+		if (img_details.comx[i] == 0) {
+			continue;
+		}
+		cout << "angles!!!!!!!!!!!!!!!!" << angle[i] << endl;
+		cout << "area!!!!!!!!!!!!!!!!" << areas[i] << endl;
+		cout << img_details.perimeter[i] << endl;
+		cout << img_details.num_particles << endl;
+		cout << img_details.comx[i] << endl;
+		cout << img_details.comy[i] << endl;
+		cout << img_details.top_line[i] << endl;
+	}
+	return 0;
 }
