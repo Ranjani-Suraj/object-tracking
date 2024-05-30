@@ -117,7 +117,6 @@ float thresh_callback(int, int, Mat imgOriginal)
 		//randomly chooses a colour for the drawn contours
 		Scalar colour = Scalar(255, 0, 255);
 		//draws the contours, bounding rectangle, and minimum enclosing circle onto the image
-		//if (boundRect[i].height < 100 || boundRect[i].width < 50 || boundRect[i].height > 300 || boundRect[i].width > 200) {
 		if(contourArea(contours[i]) < 600 || contourArea(contours[i]) > 50000){
 			std::cout << "no. contours " << contours.size() << " " << contourArea(contours[i]) << endl;
 			continue;
@@ -130,14 +129,6 @@ float thresh_callback(int, int, Mat imgOriginal)
 		Point2f vertices[4];
 		rect.points(vertices);
 
-
-		//for (int k = 0; k < 4; k++) {
-		//	line(drawing, vertices[k], vertices[(k + 1) % 4], Scalar(0, 200, 120));
-		//}
-		// 
-		// 
-		//ellipse(drawing, rect, Scalar(255, 100, 0), 1);
-		//circle(drawing, centers[i], (int)radius[i], Scalar(0, 255, 0), 1);
 		if (contourArea(contours[i]) > max_area) {
 			max_area = contourArea(contours[i]);
 		}

@@ -122,7 +122,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\rojard\Downloads\opencv\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\rojard\source\repos\json-develop\include;C:\Users\rojard\Downloads\opencv\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -136,12 +136,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="analysis.cpp" />
+    <ClCompile Include="particle_filer.cpp" />
+    <ClCompile Include="Reading_JSON.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\rojard\source\repos\json-develop\include;C:\Users\rojard\source\repos\json-develop\include\nlohmann;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="rotation_test.cpp" />
     <ClCompile Include="sample.cpp" />
     <ClCompile Include="testing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="analysis.h" />
+    <ClInclude Include="particle_filter.h" />
+    <ClInclude Include="Reading_JSON.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
