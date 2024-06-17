@@ -8,6 +8,7 @@
 #include <cmath>
 #include "particle_filter.h"
 #include <opencv2/core/ocl.hpp>
+#include "thresholding.h"
 //#include <opencv2/core/ocl.hpp>
 
 using namespace cv;
@@ -180,46 +181,47 @@ int bounding_rect_details(vector<vector<Point>> contours, vector<vector<Point>> 
 
 
 vector<vector<float>> particle_analysis(String path, int low_area, int up_area, int low_thresh, int up_thresh,
-    bool num, bool cmx, bool cmy , bool perimeter, bool area , bool circularity, bool angles, bool rect_t , bool rect_b , bool rect_l , bool rect_r )
+    bool num, bool cmx, bool cmy , bool perimeter, bool area , bool circularity, bool rect_t , bool rect_b , bool rect_l , bool rect_r, int buffer)
 //analyses particle_analysis(Mat imgThresholded, bool num, bool cmx, bool cmy, bool perimeter, bool area, bool circularity, bool angles, bool rect_t, bool rect_b, bool rect_l, bool rect_r)
 
     {
-    //cv::ocl::setUseOpenCL(false);
-    //filtering since only path was passed. This takes about 25ms totally for both reading and filtering. the rest takes 1ms
-    
-    cv::Mat img;
+    //filtering since only path was passed. 
     //img = Mat();
     //Mat imgFiltered = particle_filtering(img, low_area, up_area, low_thresh, up_thresh, true);
+    
     auto start = std::chrono::high_resolution_clock::now();
-    img = cv::imread(path, 0);
+    cv::Mat img = cv::imread(path, 0);
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    std::cout << "duration = " << duration.count() << " milliseconds filtering" << endl;
-    Mat imgFiltered = particle_filtering(img, low_area, up_area, low_thresh, up_thresh, true);
+    std::cout << "duration = " << duration.count() << " milliseconds reading" << endl;
+    
+    start = std::chrono::high_resolution_clock::now();
+    threshold_img(img, img, { (float)low_thresh, (float)up_thresh }, 255);
+    cv::Mat imgFiltered = particle_filtering(img, low_area, up_area, low_thresh, up_thresh);
 
-    //Moments m;
+    stop = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "duration = " << duration.count() << " milliseconds filtering" << endl;
     vector<vector<Point>> contours;
     vector<vector<float>> results(10);
+    start = std::chrono::high_resolution_clock::now();
     try {
 
         //cvtColor(imgThresholded, imgThresholded, COLOR_BGR2GRAY); //--------------------------------------------------------------------
         findContours(imgFiltered, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
-        vector<vector<Point>> contours_poly(contours.size());
-        //cout << contours.size() << endl;
+        //cout << "num " << contours.size() << endl;
+
         img_details.num_particles = contours.size();
         
-        size_t i = 0;
-        for (i = 0; i < contours.size(); i++)
-        {
-            approxPolyDP(contours[i], contours_poly[i], 1, true);
-        }
+        
+        
         int index = 0;
         //calling required functions
         if (num) {
             results[index] = { (float)contours.size() };
             index++;
         }
-        if(cmx || cmy)
+        if(true)
         {
             //cout << "cm" << endl;
             centre_mass(contours);
@@ -232,7 +234,7 @@ vector<vector<float>> particle_analysis(String path, int low_area, int up_area, 
                 index++;
             }
         }
-        if(perimeter || area || circularity || angles)
+        if(perimeter || area || circularity)
         {
             //cout << "p, a, c" << endl;
             perimeter_area_circularity(contours);
@@ -249,10 +251,17 @@ vector<vector<float>> particle_analysis(String path, int low_area, int up_area, 
                 index++;
             }
         }
+
         if(rect_l || rect_t || rect_r || rect_b)
         {
+            vector<vector<Point>> contours_poly(contours.size());
+
+            for (size_t x = 0; x < contours.size(); x++)
+            {
+                approxPolyDP(contours[x], contours_poly[x], 1, true);
+            }
             //cout << "rect" << endl;
-            bounding_rect_details(contours, contours_poly, rect_l, rect_t, rect_r, rect_b);
+            bounding_rect_details(contours, contours_poly, rect_l, rect_t, rect_r, rect_b, buffer);
             if (rect_t) {
                 results[index] = img_details.top_line;
                 index++;
@@ -271,105 +280,234 @@ vector<vector<float>> particle_analysis(String path, int low_area, int up_area, 
             }
         }
 
-        /*        
-        if (rect_t)
-            image_details.top_line = bounding_rect_details(path, contours, contours_poly, TOP);
-        if (rect_r)
-            image_details.right_line = bounding_rect_details(path, contours, contours_poly, RIGHT);
-        if (rect_b)
-            image_details.bottom_line = bounding_rect_details(path, contours, contours_poly, BOTTOM);
-        */
+        //arranging them in terms of their cmx
+        ///*
+        float j = 0; vector<float> key(index);
+        for (int l = 1; l < img_details.comx.size(); l++) {
+            for (int k = 1; k < index; k++)
+            {
+                //cout << k << endl;
+                key[k] = results[k][l];
+            }
+            j = l - 1;
+            // Move elements of arr[0..i-1],
+            // that are greater than key, 
+            // to one position ahead of their
+            // current position
+            while (j >= 0 && results[1][j] > key[1]) {
+                for (int k = 1; k < index; k++)
+                    results[k][j + 1] = results[k][j];
+                j = j - 1;
+            }
+            for (int k = 1; k < index; k++)
+                results[k][j + 1] = key[k];
+        }
+        //*/ having them in form of one row per object
+        vector<vector<float>> return_vals(contours.size());
+
+        vector<float> temp(index);
+        int ind = 0;
+        for (int i = 0; i < img_details.num_particles; i++) {
+            for (int j = 0; j < index; j++) {
+                if (j == 0) {
+                    temp[j] = i;
+                }
+                else
+                    temp[j] = results[j][i];
+            }
+            return_vals[i] = temp;
+        }
+
+        //drawing onto the image to show 
+        /*
+        for (int i = 0; i < img_details.num_particles; i++) {
+            circle(img, Point(results[1][i], results[2][i]), 5, Scalar(0, 0, 255));
+        
+            String text = to_string(i);
+            putText(img, //target image
+                text, //text
+                Point(results[1][i], results[2][i]), //top-left position
+                cv::FONT_HERSHEY_DUPLEX,
+                1.0,
+                CV_RGB(100, 185, 100), //font color
+                2);
+            
+            //std::cout << "Center of mass: (" << centreX[i] << ", " << centreY[i] << ")" << endl;
+            //line(img, Point(img_details.left_line[i], img_details.top_line[i]), Point(img_details.left_line[i], img_details.bottom_line[i]), Scalar(255, 255, 255), 2);;
+            //rectangle(img, boundRect[i].tl() - Point(5,5), boundRect[i].br() + Point(5, 5), Scalar(120, 120, 120), 1);
+            //drawContours(img, contours, -1, Scalar(128, 128, 128), 1);
+        }
+        imshow("analysis", img);
+        waitKey(0);
+        //*/
+
+        stop = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+        std::cout << "duration = " << duration.count() << " milliseconds analysis" << "\n" << endl;
+        return return_vals;
+
     }
     catch (Exception& e)
     {
         std::cout << e.msg << endl; // output exception message
-        return results;
+        return {};
     }
-    //cv::destroyWindow("analysis");
-    /*
-    for (int i = 0; i < img_details.num_particles; i++) {
-        circle(img, Point(img_details.comx[i], img_details.comy[i]), 5, Scalar(0, 0, 255));
-        
-        String text = to_string(i);
-        putText(img, //target image
-            text, //text
-            Point(img_details.comx[i], img_details.comy[i]), //top-left position
-            cv::FONT_HERSHEY_DUPLEX,
-            1.0,
-            CV_RGB(100, 185, 100), //font color
-            2);
-            
-        //std::cout << "Center of mass: (" << centreX[i] << ", " << centreY[i] << ")" << endl;
-        line(img, Point(img_details.left_line[i], img_details.top_line[i]), Point(img_details.left_line[i], img_details.bottom_line[i]), Scalar(255, 255, 255), 2);;
-        //rectangle(img, boundRect[i].tl() - Point(5,5), boundRect[i].br() + Point(5, 5), Scalar(120, 120, 120), 1);
-    }
-    imshow("analisys", img);
-    waitKey(0);
-    //*/
-    stop = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    cout << "duration = " << duration.count() << " milliseconds analysis" << "\n" << endl;
-    return results;
 }
 
-analyses particle_analysis(Mat imgFiltered, bool num, bool cmx, bool cmy, bool perimeter, bool area, 
-    bool circularity, bool angles, bool rect_t, bool rect_b, bool rect_l, bool rect_r)
+vector<vector<float>> particle_analysis(Mat img, bool num, bool cmx, bool cmy, bool perimeter, bool area, 
+    bool circularity, bool rect_t, bool rect_b, bool rect_l, bool rect_r, int buffer)
 //analyses particle_analysis(Mat imgThresholded, bool num, bool cmx, bool cmy, bool perimeter, bool area, bool circularity, bool angles, bool rect_t, bool rect_b, bool rect_l, bool rect_r)
 {
-    auto start = std::chrono::high_resolution_clock::now();
 
-    
+    //img must be grayscale or findcontours will fail
+    vector<vector<Point>> contours;
+    //cvtColor(imgFiltered, img, COLOR_BGR2GRAY);  
+    vector<vector<float>> results(10);
     //cv::ocl::setUseOpenCL(false);
+    if (img.empty()) {
+        return {};
+    }
+
     try {
-        vector<vector<Point>> contours;
-        //cvtColor(imgFiltered, imgFiltered, COLOR_BGR2GRAY);  
-        findContours(imgFiltered, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+        
+        findContours(img, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
         int size = contours.size();
         vector<vector<Point>> contours_poly(size);
         img_details.num_particles = size;
         size_t i = 0;
-        for (i = 0; i < size; i++)
-        {
-            approxPolyDP(contours[i], contours_poly[i], 1, true);
-            //drawContours(img, contours_poly, (int)i, Scalar(0, 0, 255), 1);
-        }
+        
 
         //calling required functions based on boolean values
-        if (cmx || cmy)
+        int index = 0;
+        //calling required functions
+        if (num) {
+            results[index] = { (float)contours.size() };
+            index++;
+        }
+        if (true)
+        {
+            //cout << "cm" << endl;
+            //this is is a true block since we always need the cmx so that the objects can be arranged in order of left ot right
             centre_mass(contours);
+            if (cmx) {
+                results[index] = img_details.comx;
+                index++;
+            }
+            if (cmy) {
+                results[index] = img_details.comy;
+                index++;
+            }
+        }
         if (perimeter || area || circularity)
-            perimeter_area_circularity( contours);
-        if (rect_l || rect_t || rect_r || rect_b)
-            bounding_rect_details(contours, contours_poly, rect_l, rect_t, rect_r, rect_b);
+        {
+            //cout << "p, a, c" << endl;
+            perimeter_area_circularity(contours);
+            if (perimeter) {
+                results[index] = img_details.perimeter;
+                index++;
+            }
+            if (area) {
+                results[index] = img_details.area;
+                index++;
+            }
+            if (circularity) {
+                results[index] = img_details.circularity;
+                index++;
+            }
+        }
 
-        /*        if (rect_t)
-                    image_details.top_line = bounding_rect_details(path, contours, contours_poly, TOP);
-                if (rect_r)
-                    image_details.right_line = bounding_rect_details(path, contours, contours_poly, RIGHT);
-                if (rect_b)
-                    image_details.bottom_line = bounding_rect_details(path, contours, contours_poly, BOTTOM);
-                */
-        cv::Point(0, 0);
+        if (rect_l || rect_t || rect_r || rect_b)
+        {
+            for (i = 0; i < size; i++)
+            {
+                approxPolyDP(contours[i], contours_poly[i], 1, true);
+            }
+            //cout << "rect" << endl;
+            bounding_rect_details(contours, contours_poly, rect_l, rect_t, rect_r, rect_b, buffer);
+            if (rect_t) {
+                results[index] = img_details.top_line;
+                index++;
+            }
+            if (rect_b) {
+                results[index] = img_details.bottom_line;
+                index++;
+            }
+            if (rect_l) {
+                results[index] = img_details.left_line;
+                index++;
+            }
+            if (rect_r) {
+                results[index] = img_details.right_line;
+                index++;
+            }
+        }
+
+        //arranging them in terms of their cmx
+        ///*
+        float j = 0; vector<float> key(index);
+        for (int l = 1; l < img_details.comx.size(); l++) {
+            for (int k = 1; k < index; k++)
+            {
+                //cout << k << endl;
+                key[k] = results[k][l];
+            }
+            j = l - 1;
+            // Move elements of arr[0..i-1],
+            // that are greater than key, 
+            // to one position ahead of their
+            // current position
+            while (j >= 0 && results[1][j] > key[1]) {
+                for (int k = 1; k < index; k++)
+                    results[k][j + 1] = results[k][j];
+                j = j - 1;
+            }
+            for (int k = 1; k < index; k++)
+                results[k][j + 1] = key[k];
+        }
+        //*/ 
+        // having them in form of one row per object
+        vector<float> temp(index);
+        vector<vector<float>> return_vals(contours.size());
+
+        for (int i = 0; i < img_details.num_particles; i++) {
+            for (int j = 0; j < index; j++) {
+                if (j == 0) {
+                    temp[j] = i;
+                }
+                else
+                    temp[j] = results[j][i];
+            }
+            return_vals[i] = temp;
+            //cout << "" << endl;
+        }
+        //drawing the centre of mass and labels for the objects on the image
+        ///*
+        for (int i = 0; i < img_details.num_particles; i++) {
+            circle(img, Point(results[1][i], results[2][i]), 5, Scalar(0, 0, 255));
+
+            String text = to_string(i); //+ " " + to_string(results[1][i]);
+            putText(img, //target image
+                text, //text
+                Point(results[1][i], results[2][i]), //top-left position
+                cv::FONT_HERSHEY_DUPLEX,
+                1.0,
+                CV_RGB(100, 185, 100), //font color
+                2);
+
+            //std::cout << "Center of mass: (" << centreX[i] << ", " << centreY[i] << ")" << endl;
+            //line(img, Point(img_details.left_line[i], img_details.top_line[i]), Point(img_details.left_line[i], img_details.bottom_line[i]), Scalar(255, 255, 255), 2);;
+            //rectangle(img, boundRect[i].tl() - Point(5,5), boundRect[i].br() + Point(5, 5), Scalar(120, 120, 120), 1);
+            //drawContours(img, contours, -1, Scalar(128, 128, 128), 1);
+        }
+        imshow("analysis", img);
+        waitKey(0);
+        //*/
+        return return_vals;
     }
     catch (Exception& e)
     {
         std::cout << e.msg << endl; // output exception message
-        return img_details;
+        return {};
     }
-     /*
-    for (int i = 0; i < img_details.num_particles; i++) {
-        circle(imgFiltered, Point(img_details.comx[i], img_details.comy[i]), 5, Scalar(0, 0, 255));
-        std::cout << "Center of mass: (" << img_details.comx[i] << ", " << img_details.comy[i] << ")" << endl;
-        line(imgFiltered, img_details.right_line[i][0], img_details.right_line[i][1], Scalar(255, 255, 255), 2);
-        //drawContours(img, contours_poly, (int)i, Scalar(120, 0, 120), 1);
-        //rectangle(img, boundRect[i].tl() - Point(5,5), boundRect[i].br() + Point(5, 5), Scalar(120, 120, 120), 1);
-    }
-    imshow("analisys", imgFiltered);
-    waitKey(0);
-    */
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    //cout << "duration = " << duration.count() << " milliseconds analysis" << "\n" << endl;
-    return img_details;
 }

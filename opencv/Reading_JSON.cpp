@@ -14,7 +14,7 @@ vector<float> parsing_values(std::string camera_type) {
 	json data;
  	data = json::parse(f);
 	//f >> data;
-	vector<float> return_values(4);
+	vector<float> return_values(9);
 	cout << "parsed" << endl;
 	//can loop through the json and store their corresponding values
 	json details_per_camera = data["SGRParametersCamwise"];
@@ -39,8 +39,31 @@ vector<float> parsing_values(std::string camera_type) {
 		//cout << "lower area" << return_values[2] << endl;
 		return_values[3] = details[left]["MaxAreaLimit"];
 		//cout << "upper area" << return_values[3] << endl;
+		//return_values[4] = data["SGRParametersLanewise"][0]["CMXTranslationBwFrames"];
+		//max diff in cmx between frames
+		//return_values[5] = details[left]["CMXTranslationBwFrames"];
+
 
 		break;
+	}
+	json common_input = data["CommonSGRInputAllLanes"];
+	return_values[4] = common_input["FullFrameXResolution"];
+	return_values[5] = common_input["MaxFruitID"];
+	return_values[6] = common_input["MissedFrameHandleLimit"];
+
+	json data_per_lane = data["SGRParametersLanewise"];
+	for (json details : data_per_lane) {
+		//it will have 2 -> one right camera, and one left camera
+		cout << details["RefCameraName"] << endl;
+		if (details["RefCameraName"] != camera_type){
+			continue;
+		}
+		return_values[7] = details["MaxCMYDeviation"];
+		return_values[8] = details["CMXTranslationBwFrames"];
+		break;
+	}
+	for (int i = 0; i < 9; i++) {
+		cout << return_values[i] << endl;
 	}
 	return return_values;
 }

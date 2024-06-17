@@ -144,11 +144,15 @@
     <ClCompile Include="rotation_test.cpp" />
     <ClCompile Include="sample.cpp" />
     <ClCompile Include="testing.cpp" />
+    <ClCompile Include="thresholding.cpp" />
+    <ClCompile Include="track.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="analysis.h" />
     <ClInclude Include="particle_filter.h" />
     <ClInclude Include="Reading_JSON.h" />
+    <ClInclude Include="thresholding.h" />
+    <ClInclude Include="track.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
